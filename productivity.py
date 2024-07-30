@@ -7,7 +7,7 @@ import random
 
 # Load tasks from tasks.json
 def load_tasks():
-    with open('/Users/stefanmarinac/VSCode Projects/Simple-Productivity-App/tasks.json', 'r') as f:
+    with open('/Users/stefanmarinac/VSCode_Projects/Simple-Productivity-App/tasks.json', 'r') as f:
         tasks = json.load(f)
     return tasks
 
