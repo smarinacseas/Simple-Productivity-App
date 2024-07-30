@@ -39,7 +39,7 @@ def main():
         for index, (task, s_time, e_time) in enumerate(schedule):
             if index < current_index:
                 # Task is completed
-                print(f'{task} completed @{s_time.strftime("%I:%M%p")}')
+                cprint(f'{task} completed @{s_time.strftime("%I:%M%p")}', 'white', 'on_green')
             elif index == current_index:
                 # Current task
                 if remaining_minutes < 2:
