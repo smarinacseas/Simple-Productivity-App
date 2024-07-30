@@ -39,17 +39,17 @@ def main():
         for index, (task, s_time, e_time) in enumerate(schedule):
             if index < current_index:
                 # Task is completed
-                print(f'{task} done: {s_time.strftime("%H:%M")}')
+                print(f'{task} completed @{s_time.strftime("%I:%M%p")}')
             elif index == current_index:
                 # Current task
                 if remaining_minutes < 2:
-                    cprint(f'{task} < 2m left', 'white', 'on_light_red', attrs=['blink'])
+                    cprint(f'{task} < 2m left', 'white', 'on_red', attrs=['blink'])
                 elif remaining_minutes < 5:
                     cprint(f'{task} - {remaining_minutes} mins', 'white', 'on_light_red')
                 else:
                     cprint(f'{task} - {remaining_minutes} mins', 'white', 'on_light_blue')
             else:
-                print(f'{task} @ {s_time.strftime("%H:%M")}')
+                print(f'{s_time.strftime("%I:%M%p")}: {task}')
 
         # Random reminder
         list_of_reminders = [
@@ -71,4 +71,5 @@ def main():
                 
         time.sleep(15)
 
-main()
+if __name__ == "__main__":
+    main()
