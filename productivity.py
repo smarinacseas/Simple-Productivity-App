@@ -43,7 +43,7 @@ def main():
             elif index == current_index:
                 # Current task
                 if remaining_minutes < 2:
-                    cprint('{task} < 2m left', 'white', 'on_light_red', attrs=['blink'])
+                    cprint(f'{task} < 2m left', 'white', 'on_light_red', attrs=['blink'])
                 elif remaining_minutes < 5:
                     cprint(f'{task} - {remaining_minutes} mins', 'white', 'on_light_red')
                 else:
