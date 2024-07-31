@@ -5,10 +5,19 @@ from datetime import datetime, timedelta
 from termcolor import cprint
 import random
 
-# Load tasks from tasks.json
-def load_tasks():
-    with open('/Users/stefanmarinac/VSCode_Projects/Simple-Productivity-App/tasks.json', 'r') as f:
-        tasks = json.load(f)
+# Function to get tasks from user input
+def get_tasks_from_input():
+    tasks = {}
+    print("Enter your tasks and their durations (in minutes). Press Enter without typing anything to finish.")
+    while True:
+        task = input("Task name: ")
+        if not task:
+            break
+        minutes = input(f"Minutes for '{task}': ")
+        if not minutes.isdigit():
+            print("Please enter a valid number for minutes.")
+            continue
+        tasks[task] = int(minutes)
     return tasks
 
 # Create schedule list from tasks
@@ -23,7 +32,7 @@ def get_tasks_schedule(tasks):
 
 # Main method
 def main():
-    tasks = load_tasks()
+    tasks = get_tasks_from_input()
     schedule = get_tasks_schedule(tasks)
     current_index = 0
 
@@ -56,8 +65,9 @@ def main():
             "I will get a high profile internship for Summer '25.",
             "I will be my best self each day.",
             "If I'm doing something, I'm making progress.",
-            "I will become a successful algorithmic trader.",
-            "Detach from the outcome, focus on the now."
+            # "I will become a successful algorithmic trader.",
+            "Detach from the outcome, focus on the now.",
+            "Be who you want to become"
         ]
         random_reminder = random.choice(list_of_reminders)
         print('*' + random_reminder)
