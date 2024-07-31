@@ -5,19 +5,45 @@ from datetime import datetime, timedelta
 from termcolor import cprint
 import random
 
-# Function to get tasks from user input
+# Function to get tasks from user input with error correction
 def get_tasks_from_input():
     tasks = {}
     print("Enter your tasks and their durations (in minutes). Press Enter without typing anything to finish.")
     while True:
+        # Get task name
         task = input("Task name: ")
         if not task:
             break
-        minutes = input(f"Minutes for '{task}': ")
-        if not minutes.isdigit():
-            print("Please enter a valid number for minutes.")
-            continue
-        tasks[task] = int(minutes)
+        # Confirm or rename task
+        while True:
+            confirm_task = input(f"Entered task name is '{task}'. Press Enter to confirm or type new name to rename: ")
+            if not confirm_task:
+                break
+            task = confirm_task
+
+        # Get task duration
+        while True:
+            minutes = input(f"Minutes for '{task}': ")
+            if not minutes:
+                break  # Allow user to skip duration input for now
+            if not minutes.isdigit():
+                print("Please enter a valid number for minutes.")
+                continue
+
+            # Confirm or change duration
+            while True:
+                confirm_minutes = input(f"Entered duration for '{task}' is {minutes} minutes. Press Enter to confirm or type new duration to change: ")
+                if not confirm_minutes:
+                    break
+                if not confirm_minutes.isdigit():
+                    print("Please enter a valid number for minutes.")
+                    continue
+                minutes = confirm_minutes
+                break
+            break
+
+        # Add task to dictionary
+        tasks[task] = int(minutes) if minutes else 0
     return tasks
 
 # Create schedule list from tasks
