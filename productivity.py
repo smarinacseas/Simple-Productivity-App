@@ -125,15 +125,36 @@ def main():
         print("No tasks entered. Exiting.")
         return
 
-    schedule = get_tasks_schedule(tasks)
+    start_time = datetime.now()
+    schedule = get_tasks_schedule(tasks, start_time)
     current_index = 0
     paused_flag = threading.Event()
+
+    def update_schedule_on_resume():
+        nonlocal schedule
+        nonlocal current_index
+        nonlocal start_time
+        nonlocal tasks
+        now = datetime.now()
+        if current_index < len(schedule):
+            remaining_duration = (schedule[current_index][2] - now).total_seconds() / 60
+            schedule = get_tasks_schedule(tasks, start_time)
+            elapsed = (now - start_time).total_seconds() / 60
+            current_index = 0
+            while elapsed > 0 and current_index < len(schedule):
+                task_duration = (schedule[current_index][2] - schedule[current_index][1]).total_seconds() / 60
+                if elapsed >= task_duration:
+                    elapsed -= task_duration
+                    current_index += 1
+                else:
+                    schedule[current_index] = (schedule[current_index][0], now, now + timedelta(minutes=task_duration - elapsed))
+                    elapsed = 0
+            start_time = now
 
     # Start the display thread
     display_thread = threading.Thread(target=display_tasks, args=(schedule, current_index, paused_flag))
     display_thread.start()
 
-    # Pause + resume functionality
     while display_thread.is_alive():
         user_input = input("Type 'pause' or 'p' to pause, 'resume' or 'r' to resume: ").strip().lower()
         if user_input in ['pause', 'p']:
@@ -141,10 +162,8 @@ def main():
             print("Task view paused. Type 'resume' or 'r' to resume.")
         elif user_input in ['resume', 'r']:
             paused_flag.clear()
+            update_schedule_on_resume()
             print("Resuming task view.")
-
-if __name__ == "__main__":
-    main()
 
 if __name__ == "__main__":
     main()
