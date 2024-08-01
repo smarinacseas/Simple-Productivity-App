@@ -14,7 +14,7 @@ def load_default_tasks():
 
 # Function to get tasks from user input with error correction and restart option
 def get_tasks_from_input():
-    tasks = {}
+    tasks = []
     initial_prompt = input("Type 'default' to load tasks from tasks.json, 'restart' to restart task input, or press Enter to start entering tasks manually: ").strip().lower()
     
     if initial_prompt == 'default':
@@ -24,21 +24,19 @@ def get_tasks_from_input():
         return get_tasks_from_input()  # Restart input process
     
     while True:
-        print("\nEnter your tasks and their durations (in minutes) or specific start times (HH:MM).")
+        print("\nEnter your tasks and their durations (in minutes) or specific start times (HH:MMam/pm).")
         print("Press Enter without typing anything to finish.\n")
-        tasks.clear()  # Clear the tasks dictionary for restarting
+        tasks.clear()  # Clear the tasks list for restarting
         while True:
-            
             # Display current tasks
             if tasks:
                 print("Current Tasks:")
-                current_time = datetime.now()
-                start_time = current_time
-                for t, (m, s_time) in tasks.items():
-                    if s_time:
-                        start_time = s_time
-                    end_time = start_time + timedelta(minutes=m if m else 0)
-                    start_info = f"{start_time.strftime('%I:%M%p')}: {t} for {m} minutes" if m else f"{start_time.strftime('%I:%M%p')}: {t}"
+                start_time = datetime.now()
+                for task, duration, specific_start_time in tasks:
+                    if specific_start_time:
+                        start_time = specific_start_time
+                    end_time = start_time + timedelta(minutes=duration)
+                    start_info = f"{start_time.strftime('%I:%M%p')}: {task} for {duration} minutes" if duration else f"{start_time.strftime('%I:%M%p')}: {task}"
                     print(f" - {start_info}")
                     start_time = end_time
                 print("")
@@ -50,7 +48,6 @@ def get_tasks_from_input():
                 break
             if not task:
                 return tasks
-            
             # Confirm or rename task
             while True:
                 confirm_task = input(f"'{task}' OK? (Enter to confirm, or type new name): ")
@@ -60,17 +57,15 @@ def get_tasks_from_input():
 
             # Get task duration or start time
             while True:
-                time_input = input(f"Enter duration in minutes or start time (HH:MM) for '{task}': ")
+                time_input = input(f"Enter duration in minutes or start time (HH:MMam/pm) for '{task}': ")
                 if not time_input:
                     break  # Allow user to skip duration input for now
                 try:
-                    if ':' in time_input:
+                    if 'am' in time_input.lower() or 'pm' in time_input.lower():
+                        entered_time = datetime.strptime(time_input, '%I:%M%p')
+                        # Adjust the entered time to the current date
                         current_time = datetime.now()
-                        entered_time = datetime.strptime(time_input, '%H:%M')
-                        # Assume the entered time is today, and adjust if it's in the past
                         entered_time = entered_time.replace(year=current_time.year, month=current_time.month, day=current_time.day)
-                        if entered_time < current_time:
-                            entered_time += timedelta(hours=12)  # Consider as PM if time has passed
                         start_time = entered_time
                         duration = None
                     else:
@@ -86,13 +81,10 @@ def get_tasks_from_input():
                     if not confirm_time:
                         break
                     try:
-                        if ':' in confirm_time:
-                            current_time = datetime.now()
-                            entered_time = datetime.strptime(confirm_time, '%H:%M')
-                            # Assume the entered time is today, and adjust if it's in the past
+                        if 'am' in confirm_time.lower() or 'pm' in confirm_time.lower():
+                            entered_time = datetime.strptime(confirm_time, '%I:%M%p')
+                            # Adjust the entered time to the current date
                             entered_time = entered_time.replace(year=current_time.year, month=current_time.month, day=current_time.day)
-                            if entered_time < current_time:
-                                entered_time += timedelta(hours=12)  # Consider as PM if time has passed
                             start_time = entered_time
                             duration = None
                         else:
@@ -103,7 +95,7 @@ def get_tasks_from_input():
                         print("Enter a valid number or time.")
                         continue
 
-                tasks[task] = (duration, start_time)
+                tasks.append((task, duration, start_time))
                 break
 
         if task.lower() != 'restart':
@@ -115,13 +107,31 @@ def get_tasks_schedule(tasks, start_time=None):
     if start_time is None:
         start_time = datetime.now()
     schedule = []
-    task_start_time = start_time
-    for task, (minutes, specific_start_time) in tasks.items():
+    remaining_tasks = []
+    for task, duration, specific_start_time in tasks:
         if specific_start_time:
-            task_start_time = specific_start_time
-        end_time = task_start_time + timedelta(minutes=minutes if minutes else 0)
-        schedule.append((task, task_start_time, end_time))
-        task_start_time = end_time
+            if start_time < specific_start_time:
+                # Fill the gap with remaining tasks
+                while remaining_tasks and start_time < specific_start_time:
+                    remaining_task, remaining_duration = remaining_tasks.pop(0)
+                    if start_time + timedelta(minutes=remaining_duration) <= specific_start_time:
+                        schedule.append((remaining_task, start_time, start_time + timedelta(minutes=remaining_duration)))
+                        start_time += timedelta(minutes=remaining_duration)
+                    else:
+                        remaining_tasks.insert(0, (remaining_task, remaining_duration - (specific_start_time - start_time).seconds // 60))
+                        schedule.append((remaining_task, start_time, specific_start_time))
+                        start_time = specific_start_time
+            start_time = specific_start_time
+        end_time = start_time + timedelta(minutes=duration if duration else 0)
+        schedule.append((task, start_time, end_time))
+        start_time = end_time
+        # Check for overlapping tasks
+        while remaining_tasks and remaining_tasks[0][1] <= (end_time - start_time).seconds // 60:
+            remaining_task, remaining_duration = remaining_tasks.pop(0)
+            schedule.append((remaining_task, start_time, start_time + timedelta(minutes=remaining_duration)))
+            start_time += timedelta(minutes=remaining_duration)
+        if remaining_tasks:
+            remaining_tasks[0] = (remaining_tasks[0][0], remaining_tasks[0][1] - (end_time - start_time).seconds // 60)
     return schedule
 
 # Method for displaying tasks, times, and time remaining

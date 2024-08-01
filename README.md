@@ -11,6 +11,7 @@
 - Separated task list display from main method. Implemented pause/resume functionality.
 - Allows default schedule to be started from beginning
 - User can specify start time for a specific task before entering duration
+- Tasks with specified start time are prioritized, surrounding tasks with no specified start time fill in empty time slots/or are rescheduled when overlapping.
 
 Future:
 
