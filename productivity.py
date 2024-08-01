@@ -6,6 +6,10 @@ from termcolor import cprint
 import random
 import threading
 
+# Helper function to round up minutes to multiple of 5
+def round_up_to_nearest_five(minutes):
+    return ((minutes + 4) // 5) * 5
+
 # Function to load tasks from a hard-coded tasks.json file
 def load_default_tasks():
     with open('/Users/stefanmarinac/VSCode_Projects/Simple-Productivity-App/tasks.json', 'r') as f:
@@ -81,7 +85,9 @@ def get_tasks_schedule(tasks, start_time=None):
 
     for task, duration, specific_start_time in tasks:
         if specific_start_time:
+            # Handle gaps between tasks properly
             if start_time < specific_start_time:
+                # Fill gaps with remaining tasks
                 while remaining_tasks and start_time < specific_start_time:
                     remaining_task, remaining_duration = remaining_tasks.pop(0)
                     if start_time + timedelta(minutes=remaining_duration) <= specific_start_time:
@@ -90,7 +96,7 @@ def get_tasks_schedule(tasks, start_time=None):
                     else:
                         overlap_duration = (specific_start_time - start_time).seconds // 60
                         remaining_tasks.insert(0, (remaining_task, remaining_duration - overlap_duration))
-                        schedule.append((remaining_task, start_time, specific_start_time))
+                        schedule.append((remaining_task, start_time, start_time + timedelta(minutes=overlap_duration)))
                         start_time = specific_start_time
             start_time = specific_start_time
         end_time = start_time + timedelta(minutes=duration if duration else 0)
@@ -103,10 +109,31 @@ def get_tasks_schedule(tasks, start_time=None):
 
         while remaining_tasks:
             remaining_task, remaining_duration = remaining_tasks.pop(0)
+            if remaining_task.endswith("(cont)"):
+                remaining_duration = round_up_to_nearest_five(remaining_duration)
             schedule.append((remaining_task, start_time, start_time + timedelta(minutes=remaining_duration)))
             start_time += timedelta(minutes=remaining_duration)
 
-    return schedule
+    # Handle inserting tasks in gaps
+    final_schedule = []
+    for i, (task, start, end) in enumerate(schedule):
+        if i == 0:
+            final_schedule.append((task, start, end))
+        else:
+            previous_end = final_schedule[-1][2]
+            if start > previous_end:
+                while remaining_tasks and previous_end < start:
+                    remaining_task, remaining_duration = remaining_tasks.pop(0)
+                    if previous_end + timedelta(minutes=remaining_duration) <= start:
+                        final_schedule.append((remaining_task, previous_end, previous_end + timedelta(minutes=remaining_duration)))
+                        previous_end += timedelta(minutes=remaining_duration)
+                    else:
+                        overlap_duration = (start - previous_end).seconds // 60
+                        remaining_tasks.insert(0, (remaining_task, remaining_duration - overlap_duration))
+                        final_schedule.append((remaining_task, previous_end, previous_end + timedelta(minutes=overlap_duration)))
+                        previous_end = start
+            final_schedule.append((task, start, end))
+    return final_schedule
 
 def display_tasks(schedule, current_index, paused_flag):
     while True:
