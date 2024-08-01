@@ -96,10 +96,8 @@ def get_tasks_schedule(tasks, start_time=None):
     schedule = []
     current_time = start_time
 
-    print("\n[DEBUG] Inserting scheduled tasks into the timeline")
     # Insert scheduled tasks into the timeline
     for task, duration, specific_start_time in scheduled_tasks:
-        print(f"[DEBUG] Adding scheduled task '{task}' from {specific_start_time.strftime('%I:%M%p')} for {duration} minutes")
         if current_time < specific_start_time:
             current_time = specific_start_time
         end_time = current_time + timedelta(minutes=duration)
@@ -112,32 +110,25 @@ def get_tasks_schedule(tasks, start_time=None):
     for task, start, end in schedule:
         if current_time < start:
             free_slots.append((current_time, start))
-            print(f"[DEBUG] Free slot added from {current_time.strftime('%I:%M%p')} to {start.strftime('%I:%M%p')}")
         current_time = end
 
     free_slots.append((current_time, datetime.max))
-    print(f"[DEBUG] Free slot added from {current_time.strftime('%I:%M%p')} to {datetime.max.strftime('%I:%M%p')}")
 
-    print("\n[DEBUG] Fitting unscheduled tasks into the gaps between scheduled tasks")
     # Fit unscheduled tasks into the gaps between scheduled tasks
     for task, duration in unscheduled_tasks:
-        print(f"[DEBUG] Trying to fit unscheduled task '{task}' for {duration} minutes")
         while duration > 0 and free_slots:
             free_start, free_end = free_slots.pop(0)
             available_time = (free_end - free_start).seconds // 60
             task_duration = min(duration, available_time)
             if task_duration <= 2: # Buffer to ensure small free time slots are skipped
-                print(f"[DEBUG] Skipping free slot from {free_start.strftime('%I:%M%p')} to {free_end.strftime('%I:%M%p')} due to no available time")
                 continue
             end_time = free_start + timedelta(minutes=task_duration)
             schedule.append((task, free_start, end_time))
-            print(f"[DEBUG] Added '{task}' from {free_start.strftime('%I:%M%p')} to {end_time.strftime('%I:%M%p')}")
             duration -= task_duration
             if end_time < free_end:
                 free_slots.insert(0, (end_time, free_end))
-                print(f"[DEBUG] Adjusted free slot from {end_time.strftime('%I:%M%p')} to {free_end.strftime('%I:%M%p')}")
-            else:
-                print(f"[DEBUG] No remaining free slots to adjust from {end_time.strftime('%I:%M%p')} to {free_end.strftime('%I:%M%p')}")
+            # else:
+            #     print(f"[DEBUG] No remaining free slots to adjust from {end_time.strftime('%I:%M%p')} to {free_end.strftime('%I:%M%p')}")
 
     # Ensure schedule is sorted by start time
     schedule.sort(key=lambda x: x[1])
