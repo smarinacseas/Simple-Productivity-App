@@ -11,8 +11,7 @@
 - Separated task list display from main method. Implemented pause/resume functionality.
 - Allows default schedule to be started from beginning
 - User can specify start time for a specific task before entering duration
-- Tasks with specified start time are prioritized, surrounding tasks with no specified start time fill in empty time slots/or are rescheduled when overlapping.
 
 Future:
 
-1. Create default schedules that user can setup and choose to run (e.g. '2hr intense focus', '4hr lecture review', etc)
+1. Prioritize scheduled tasks, then fill in tasks with specified duration in empty time slots
