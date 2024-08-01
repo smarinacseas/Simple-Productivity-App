@@ -6,19 +6,41 @@ from termcolor import cprint
 import random
 import threading
 
+# Function to load tasks from a hard-coded tasks.json file
+def load_default_tasks():
+    with open('/Users/stefanmarinac/VSCode_Projects/Simple-Productivity-App/tasks.json', 'r') as f:
+        tasks = json.load(f)
+    return tasks
+
 # Function to get tasks from user input with error correction and restart option
 def get_tasks_from_input():
     tasks = {}
+    initial_prompt = input("Type 'default' to load tasks from tasks.json, 'restart' to restart task input, or press Enter to start entering tasks manually: ").strip().lower()
+    
+    if initial_prompt == 'default':
+        return load_default_tasks()
+    if initial_prompt == 'restart':
+        print("Restarting task input...\n")
+        return get_tasks_from_input()  # Restart input process
+    
     while True:
-        print("\nEnter your tasks and their durations (in minutes).")
-        print("Type 'restart' to restart task input. Press Enter without typing anything to finish.\n")
+        print("\nEnter your tasks and their durations (in minutes) or specific start times (HH:MM).")
+        print("Press Enter without typing anything to finish.\n")
         tasks.clear()  # Clear the tasks dictionary for restarting
         while True:
+            
             # Display current tasks
             if tasks:
                 print("Current Tasks:")
-                for t, m in tasks.items():
-                    print(f" - {t}: {m} minutes")
+                current_time = datetime.now()
+                start_time = current_time
+                for t, (m, s_time) in tasks.items():
+                    if s_time:
+                        start_time = s_time
+                    end_time = start_time + timedelta(minutes=m if m else 0)
+                    start_info = f"{start_time.strftime('%I:%M%p')}: {t} for {m} minutes" if m else f"{start_time.strftime('%I:%M%p')}: {t}"
+                    print(f" - {start_info}")
+                    start_time = end_time
                 print("")
 
             # Get task name
@@ -28,6 +50,7 @@ def get_tasks_from_input():
                 break
             if not task:
                 return tasks
+            
             # Confirm or rename task
             while True:
                 confirm_task = input(f"'{task}' OK? (Enter to confirm, or type new name): ")
@@ -35,40 +58,68 @@ def get_tasks_from_input():
                     break
                 task = confirm_task
 
-            # Get task duration
+            # Get task duration or start time
             while True:
-                minutes = input(f"Minutes for '{task}': ")
-                if not minutes:
+                time_input = input(f"Enter duration in minutes or start time (HH:MM) for '{task}': ")
+                if not time_input:
                     break  # Allow user to skip duration input for now
-                if not minutes.isdigit():
-                    print("Enter a valid number.")
+                try:
+                    if ':' in time_input:
+                        current_time = datetime.now()
+                        entered_time = datetime.strptime(time_input, '%H:%M')
+                        # Assume the entered time is today, and adjust if it's in the past
+                        entered_time = entered_time.replace(year=current_time.year, month=current_time.month, day=current_time.day)
+                        if entered_time < current_time:
+                            entered_time += timedelta(hours=12)  # Consider as PM if time has passed
+                        start_time = entered_time
+                        duration = None
+                    else:
+                        duration = int(time_input)
+                        start_time = None
+                except ValueError:
+                    print("Enter a valid number or time.")
                     continue
 
-                # Confirm or change duration
+                # Confirm or change duration/start time
                 while True:
-                    confirm_minutes = input(f"{minutes} min OK? (Enter to confirm, or type new): ")
-                    if not confirm_minutes:
+                    confirm_time = input(f"{time_input} OK? (Enter to confirm, or type new): ")
+                    if not confirm_time:
                         break
-                    if not confirm_minutes.isdigit():
-                        print("Enter a valid number.")
+                    try:
+                        if ':' in confirm_time:
+                            current_time = datetime.now()
+                            entered_time = datetime.strptime(confirm_time, '%H:%M')
+                            # Assume the entered time is today, and adjust if it's in the past
+                            entered_time = entered_time.replace(year=current_time.year, month=current_time.month, day=current_time.day)
+                            if entered_time < current_time:
+                                entered_time += timedelta(hours=12)  # Consider as PM if time has passed
+                            start_time = entered_time
+                            duration = None
+                        else:
+                            duration = int(confirm_time)
+                            start_time = None
+                        break
+                    except ValueError:
+                        print("Enter a valid number or time.")
                         continue
-                    minutes = confirm_minutes
-                    break
-                break
 
-            # Add task to dictionary
-            tasks[task] = int(minutes) if minutes else 0
+                tasks[task] = (duration, start_time)
+                break
 
         if task.lower() != 'restart':
             break  # Exit outer loop if not restarting
     return tasks
 
 # Create schedule list from tasks
-def get_tasks_schedule(tasks):
-    task_start_time = datetime.now()
+def get_tasks_schedule(tasks, start_time=None):
+    if start_time is None:
+        start_time = datetime.now()
     schedule = []
-    for task, minutes in tasks.items():
-        end_time = task_start_time + timedelta(minutes=minutes)
+    task_start_time = start_time
+    for task, (minutes, specific_start_time) in tasks.items():
+        if specific_start_time:
+            task_start_time = specific_start_time
+        end_time = task_start_time + timedelta(minutes=minutes if minutes else 0)
         schedule.append((task, task_start_time, end_time))
         task_start_time = end_time
     return schedule
