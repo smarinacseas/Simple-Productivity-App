@@ -69,7 +69,9 @@ def get_tasks_from_input():
             schedule = get_tasks_schedule(tasks)
             print("Current Tasks:")
             for task, start, end in schedule:
-                print(f" - {start.strftime('%I:%M%p')}: {task} for {(end - start).seconds // 60} minutes")
+                duration_minutes = (end - start).seconds // 60
+                hours, minutes = divmod(duration_minutes, 60)
+                print(f" - {start.strftime('%I:%M%p')}: {task} for {hours}h{minutes:02d}m")
             print("")
             
         if task.lower() != 'restart':
@@ -122,7 +124,7 @@ def get_tasks_schedule(tasks, start_time=None):
             task_duration = min(duration, available_time)
             if task_duration <= 2: # Buffer to ensure small free time slots are skipped
                 continue
-            end_time = free_start + timedelta(minutes=task_duration)
+            end_time = round_up_to_nearest_five(free_start + timedelta(minutes=task_duration))
             schedule.append((task, free_start, end_time))
             duration -= task_duration
             if end_time < free_end:
@@ -142,23 +144,26 @@ def display_tasks(schedule, current_index, paused_flag):
             current_task, start_time, end_time = schedule[current_index]
             remaining_time = end_time - now
             remaining_minutes = int(remaining_time.total_seconds() // 60)
+            remaining_hours, remaining_minutes = divmod(remaining_minutes, 60)
 
             print('')
 
             for index, (task, s_time, e_time) in enumerate(schedule):
+                duration_minutes = (e_time - s_time).seconds // 60
+                hours, minutes = divmod(duration_minutes, 60)
                 if index < current_index:
                     # Task is completed
                     cprint(f'{task} @ {s_time.strftime("%I:%M%p")} [Done]', 'white', 'on_green')
                 elif index == current_index:
                     # Current task
-                    if remaining_minutes < 2:
-                        cprint(f'{task} < 2m', 'white', 'on_red', attrs=['blink'])
-                    elif remaining_minutes < 5:
-                        cprint(f'{task} - {remaining_minutes}m', 'white', 'on_light_red')
+                    if remaining_minutes < 2 and remaining_hours == 0:
+                        cprint(f'{task} < {remaining_hours}h{remaining_minutes:02d}m', 'white', 'on_red', attrs=['blink'])
+                    elif remaining_minutes < 5 and remaining_hours == 0:
+                        cprint(f'{task} - {remaining_hours}h{remaining_minutes:02d}m', 'white', 'on_light_red')
                     else:
-                        cprint(f'{task} - {remaining_minutes}m', 'white', 'on_light_blue')
+                        cprint(f'{task} - {remaining_hours}h{remaining_minutes:02d}m', 'white', 'on_light_blue')
                 else:
-                    print(f'{s_time.strftime("%I:%M%p")}: {task}')
+                    print(f'{s_time.strftime("%I:%M%p")}: {task} for {hours}h{minutes:02d}m')
 
             # Random reminder
             list_of_reminders = [
